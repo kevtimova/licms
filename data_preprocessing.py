@@ -92,7 +92,7 @@ def main():
     """
     Sepsis Data
     """
-    sepsis_loc = os.path.join(args.datadir, "sepsis3-data/sepsis3-df.csv")
+    sepsis_loc = os.path.join(args.datadir, "sepsis3-df.csv")
     sepsis = read_data(sepsis_loc)
 
     """
