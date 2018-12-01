@@ -49,21 +49,28 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, loss,
         outputs = []
         labels.fill_(generated_label)
         loss_D_generated = 0 # TODO make compatible with output
-        expert_scores = torch.FloatTensor().cuda() if args.cuda else torch.FloatTensor()
+        expert_scores = []
         for i, expert in enumerate(experts):
             output = expert(x_pret)
             scores = discriminator(output.detach())
-            torch.cat(expert_scores, scores) # TODO check dim
+            expert_scores.append(scores)
             loss_D_generated += criterion(output, scores)
         loss_D_generated = loss_D_generated / args.num_experts
         loss_D_generated.backward()
         optimizer_D.step()
 
-        expert_winners = None # TODO best expert for each data point
+        expert_scores = torch.cat(expert_scores, dim=1) # TODO check dim
+        mask_winners = expert_scores.argmax(axis=0) # TODO check axis
         # TODO update each expert
+        labels.fill_(canonical_label)
         for i, expert in enumerate(experts):
-            labels.fill_(canonical_label)
             optimizers_E[i].zero_grad()
+            samples = mask_winners.indices.where(i is the winner)
+            loss_E = criterion(discriminator(samples), labels)
+            loss_E.backward()
+            optimizers_E[i].step()
+
+        # TODO print losses
 
 
 
@@ -143,6 +150,6 @@ if __name__ == '__main__':
     # Training
     for epoch in range(args.epochs):
 
-        train_system()
+        train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, criterion, data_train, args)
 
 
