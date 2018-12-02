@@ -104,6 +104,7 @@ def main():
     labevents_loc = os.path.join(args.datadir, "LABEVENTS.csv")
     merged = pd.DataFrame()
     for i, labevents in enumerate(read_data(labevents_loc, chunksize=args.chunksize)):
+        print("Merging {} chunk".format(i+1))
         labevents.columns = labevents.columns.str.lower()
         merged.append(joined_data.merge(labevents, on=['subject_id', 'hadm_id'], how='inner'))
 
