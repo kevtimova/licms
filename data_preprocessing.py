@@ -2,14 +2,16 @@ import pandas as pd
 import argparse
 import os
 
-def read_data(file_loc, columns=None):
-    data = pd.read_csv(file_loc, delimiter=',', usecols=columns)
+def read_data(file_loc, columns=None, chunksize=None):
+    data = pd.read_csv(file_loc, delimiter=',', usecols=columns, chunksize=chunksize)
     return data
 
 def main():
     parser = argparse.ArgumentParser(description='MIMIC III')
     parser.add_argument('--datadir', default='./data', type=str,
                         help='path to the directory that contains the data')
+    parser.add_argument('--chunksize', default=1000000, type=str,
+                        help='chunksize')
     # Get arguments
     args = parser.parse_args()
 
@@ -95,15 +97,16 @@ def main():
     sepsis_loc = os.path.join(args.datadir, "sepsis3-df.csv")
     sepsis = read_data(sepsis_loc)
 
+    joined_data = sepsis.merge(admissions, on=['hadm_id'])
     """
     LABEVENTS.csv
     """
-    labevents = os.path.join(args.datadir, "LABEVENTS.csv")
-    labevents.columns = labevents.columns.str.lower()
+    labevents_loc = os.path.join(args.datadir, "LABEVENTS.csv")
+    for labevents in read_data(labevents_loc, chunksize=args.chunksize):
+        labevents.columns = labevents.columns.str.lower()
+        joined_data = joined_data.merge(labevents, on=['subject_id', 'hadm_id'])
 
     # Join Sepsis and ADMISSIONS
-    joined_data = sepsis.merge(admissions, on=['hadm_id'])
-    joined_data = joined_data.merge(labevents, on=['subject_id', 'hadm_id'])
     joined_data.to_csv(os.path.join(args.datadir, "joined_data.csv"))
 
 
