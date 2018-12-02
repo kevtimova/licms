@@ -104,13 +104,15 @@ def main():
     labevents_loc = os.path.join(args.datadir, "LABEVENTS.csv")
     merged = pd.DataFrame()
     for i, labevents in enumerate(read_data(labevents_loc, chunksize=args.chunksize)):
-        print("Merging {} chunk".format(i+1))
+        print("Merging chunk {} ...".format(i+1))
         labevents.columns = labevents.columns.str.lower()
-        merged.append(joined_data.merge(labevents, on=['subject_id', 'hadm_id'], how='inner'))
+        merged_chunk = pd.merge(joined_data, labevents, on=['subject_id', 'hadm_id'], how='inner')
+        merged.append(merged_chunk)
 
     # Join Sepsis and ADMISSIONS
-    merged.to_csv(os.path.join(args.datadir, "joined_data.csv"))
-
+    output_loc = os.path.join(args.datadir, "joined_data.csv")
+    merged.to_csv(output_loc)
+    print("Saved joined data in {}".format(output_loc))
 
 if __name__ == '__main__':
     main()
