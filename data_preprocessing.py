@@ -10,7 +10,7 @@ def main():
     parser = argparse.ArgumentParser(description='MIMIC III')
     parser.add_argument('--datadir', default='./data', type=str,
                         help='path to the directory that contains the data')
-    parser.add_argument('--chunksize', default=1000000, type=str,
+    parser.add_argument('--chunksize', default=1000000, type=int,
                         help='chunksize')
     # Get arguments
     args = parser.parse_args()
