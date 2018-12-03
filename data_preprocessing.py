@@ -53,7 +53,7 @@ def main():
     Bicarbonate
     INR - International Normalized Ratio
     Sodium
-    Arte- rial Lactate
+    Arterial Lactate
     CO2
     Creatinine
     Ionised Calcium
@@ -98,21 +98,36 @@ def main():
     sepsis = read_data(sepsis_loc)
 
     joined_data = sepsis.merge(admissions, on=['hadm_id'])
-    """
-    LABEVENTS.csv
-    """
-    labevents_loc = os.path.join(args.datadir, "LABEVENTS.csv")
-    merged = pd.DataFrame()
-    for i, labevents in enumerate(read_data(labevents_loc, chunksize=args.chunksize)):
-        print("Merging chunk {} ...".format(i+1))
-        labevents.columns = labevents.columns.str.lower()
-        merged_chunk = pd.merge(joined_data, labevents, on=['subject_id', 'hadm_id'], how='inner')
-        merged.append(merged_chunk)
+    sepsis_patients = joined_data[['hadm_id', 'subject_id']]
 
-    # Join Sepsis and ADMISSIONS
-    output_loc = os.path.join(args.datadir, "joined_data.csv")
-    merged.to_csv(output_loc)
-    print("Saved joined data in {}".format(output_loc))
+    """
+    CHARTEVENTS
+    """
+    chartevents_loc = os.path.join(args.datadir, "CHARTEVENTS.csv")
+    chartevents = pd.DataFrame()
+    for i, chunk in enumerate(read_data(chartevents_loc, chunksize=args.chunksize)):
+        print("Merging chunk {} ...".format(i+1))
+        chunk.columns = chunk.columns.str.lower()
+        merged_chunk = pd.merge(sepsis_patients, chunk, on=['subject_id', 'hadm_id'], how='inner')
+        chartevents.append(merged_chunk)
+        import ipdb; ipdb.set_trace()
+
+
+    # """
+    # LABEVENTS.csv
+    # """
+    # labevents_loc = os.path.join(args.datadir, "LABEVENTS.csv")
+    # merged = pd.DataFrame()
+    # for i, labevents in enumerate(read_data(labevents_loc, chunksize=args.chunksize)):
+    #     print("Merging chunk {} ...".format(i+1))
+    #     labevents.columns = labevents.columns.str.lower()
+    #     merged_chunk = pd.merge(joined_data, labevents, on=['subject_id', 'hadm_id'], how='inner')
+    #     merged.append(merged_chunk)
+    #
+    # # Join Sepsis and ADMISSIONS
+    # output_loc = os.path.join(args.datadir, "joined_data.csv")
+    # merged.to_csv(output_loc)
+    # print("Saved joined data in {}".format(output_loc))
 
 if __name__ == '__main__':
     main()
