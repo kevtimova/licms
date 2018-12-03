@@ -109,9 +109,10 @@ def main():
         print("Merging chunk {} ...".format(i+1))
         chunk.columns = chunk.columns.str.lower()
         merged_chunk = pd.merge(sepsis_patients, chunk, on=['subject_id', 'hadm_id'], how='inner')
-        chartevents.append(merged_chunk)
-        import ipdb; ipdb.set_trace()
+        chartevents = chartevents.append(merged_chunk)
 
+    chartevents_output = os.path.join(args.datadir, "sepsis_chartevents.csv")
+    chartevents.to_csv(chartevents_output)
 
     # """
     # LABEVENTS.csv
@@ -122,7 +123,7 @@ def main():
     #     print("Merging chunk {} ...".format(i+1))
     #     labevents.columns = labevents.columns.str.lower()
     #     merged_chunk = pd.merge(joined_data, labevents, on=['subject_id', 'hadm_id'], how='inner')
-    #     merged.append(merged_chunk)
+    #     merged = merged.append(merged_chunk)
     #
     # # Join Sepsis and ADMISSIONS
     # output_loc = os.path.join(args.datadir, "joined_data.csv")
