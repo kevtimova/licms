@@ -152,7 +152,13 @@ def main():
     """
     chartevents_loc = os.path.join(args.datadir, "sepsis_chartevents.csv")
     chartevents = read_data(chartevents_loc)
-    import ipdb; ipdb.set_trace()
+    columns = ['hadm_id', 'charttime', 'label', 'valuenum']
+    import ipdb;
+    ipdb.set_trace()
+    wide_data = pd.pivot_table(chartevents[columns], index=['hadm_id', 'charttime'], columns='label', values='valuenum')
+    wide_data = wide_data.reset_index(level=['hadm_id', 'charttime'])
+
+    sepsis_chartevents = wide_data.merge(joined_data, how='')
 
 if __name__ == '__main__':
     main()
