@@ -104,8 +104,8 @@ def main():
     D_ITEMS
     """
     d_items_loc = os.path.join(args.datadir, "D_ITEMS.csv")
-    d_items = read_data(d_items_loc, columns=['label', 'itemid', 'dbsource', 'linksto',
-                                              'category', 'unitname', 'param_type', 'conceptid'])
+    d_items = read_data(d_items_loc, columns=['LABEL', 'ITEMID', 'DBSOURCE', 'LINKSTO',
+                                              'CATEGORY', 'UNITNAME', 'PARAM_TYPE', 'CONCEPTID'])
     d_items.columns = d_items.columns.str.lower()
     d_items.label = d_items.label.str.lower()
 
