@@ -117,19 +117,19 @@ def main():
     d_items_final_loc = os.path.join(args.datadir, "D_ITEMS_final.csv")
     d_items_final.to_csv(d_items_final_loc, index=False)
 
-    """
-    CHARTEVENTS
-    """
-    chartevents_loc = os.path.join(args.datadir, "CHARTEVENTS.csv")
-    chartevents = pd.DataFrame()
-    for i, chunk in enumerate(read_data(chartevents_loc, chunksize=args.chunksize)):
-        print("Merging chunk {} ...".format(i+1))
-        chunk.columns = chunk.columns.str.lower()
-        filtered_chunk = chunk.merge(d_items_final, on=['itemid'], how='inner')
-        merged_chunk = pd.merge(sepsis_patients, filtered_chunk, on=['subject_id', 'hadm_id'], how='inner')
-        chartevents = chartevents.append(merged_chunk)
-    chartevents_output = os.path.join(args.datadir, "sepsis_chartevents.csv")
-    chartevents.to_csv(chartevents_output, index=False)
+    # """
+    # CHARTEVENTS
+    # """
+    # chartevents_loc = os.path.join(args.datadir, "CHARTEVENTS.csv")
+    # chartevents = pd.DataFrame()
+    # for i, chunk in enumerate(read_data(chartevents_loc, chunksize=args.chunksize)):
+    #     print("Merging chunk {} ...".format(i+1))
+    #     chunk.columns = chunk.columns.str.lower()
+    #     filtered_chunk = chunk.merge(d_items_final, on=['itemid'], how='inner')
+    #     merged_chunk = pd.merge(sepsis_patients, filtered_chunk, on=['subject_id', 'hadm_id'], how='inner')
+    #     chartevents = chartevents.append(merged_chunk)
+    # chartevents_output = os.path.join(args.datadir, "sepsis_chartevents.csv")
+    # chartevents.to_csv(chartevents_output, index=False)
 
     # """
     # LABEVENTS.csv
@@ -146,6 +146,13 @@ def main():
     # output_loc = os.path.join(args.datadir, "joined_data.csv")
     # merged.to_csv(output_loc, index=False)
     # print("Saved joined data in {}".format(output_loc))
+
+    """"
+    Organize by Patient
+    """
+    chartevents_loc = os.path.join(args.datadir, "sepsis_chartevents.csv")
+    chartevents = read_data(chartevents_loc)
+    import ipdb; ipdb.set_trace()
 
 if __name__ == '__main__':
     main()
