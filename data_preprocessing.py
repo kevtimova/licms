@@ -101,18 +101,24 @@ def main():
     sepsis_patients = joined_data[['hadm_id', 'subject_id']]
 
     """
-    CHARTEVENTS
+    D_ITEMS
     """
-    chartevents_loc = os.path.join(args.datadir, "CHARTEVENTS.csv")
-    chartevents = pd.DataFrame()
-    for i, chunk in enumerate(read_data(chartevents_loc, chunksize=args.chunksize)):
-        print("Merging chunk {} ...".format(i+1))
-        chunk.columns = chunk.columns.str.lower()
-        merged_chunk = pd.merge(sepsis_patients, chunk, on=['subject_id', 'hadm_id'], how='inner')
-        chartevents = chartevents.append(merged_chunk)
-
-    chartevents_output = os.path.join(args.datadir, "sepsis_chartevents.csv")
-    chartevents.to_csv(chartevents_output)
+    d_items_loc = os.path.join(args.datadir, "D_ITEMS.csv")
+    d_items = read_data(d_items_loc)
+    import ipdb; ipdb.set_trace()
+    # """
+    # CHARTEVENTS
+    # """
+    # chartevents_loc = os.path.join(args.datadir, "CHARTEVENTS.csv")
+    # chartevents = pd.DataFrame()
+    # for i, chunk in enumerate(read_data(chartevents_loc, chunksize=args.chunksize)):
+    #     print("Merging chunk {} ...".format(i+1))
+    #     chunk.columns = chunk.columns.str.lower()
+    #     merged_chunk = pd.merge(sepsis_patients, chunk, on=['subject_id', 'hadm_id'], how='inner')
+    #     chartevents = chartevents.append(merged_chunk)
+    #
+    # chartevents_output = os.path.join(args.datadir, "sepsis_chartevents.csv")
+    # chartevents.to_csv(chartevents_output)
 
     # """
     # LABEVENTS.csv
