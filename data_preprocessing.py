@@ -186,7 +186,10 @@ def main():
         import ipdb; ipdb.set_trace()
         aggregated = sepsis_chartevents.groupby(group_vars)[var].mean()
         aggregated = aggregated.reset_index(level=group_vars)
-        sepsis_chartevents_static = sepsis_chartevents_static.join(aggregated, on=group_vars)
+        sepsis_chartevents_static = sepsis_chartevents_static.merge(aggregated, on=group_vars)
+
+    sepsis_chartevents_loc = os.path.join(args.datadir, "sepsis_aggregated.csv")
+    sepsis_chartevents_static.to_csv(sepsis_chartevents_loc, index=False)
 
 if __name__ == '__main__':
     main()
