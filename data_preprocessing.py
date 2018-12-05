@@ -104,8 +104,9 @@ def main():
     D_ITEMS
     """
     d_items_loc = os.path.join(args.datadir, "D_ITEMS.csv")
-    d_items = read_data(d_items_loc, columns=['LABEL', 'ITEMID', 'DBSOURCE', 'LINKSTO',
-                                              'CATEGORY', 'UNITNAME', 'PARAM_TYPE', 'CONCEPTID'])
+    # d_items_cols = ['LABEL', 'ITEMID', 'DBSOURCE', 'LINKSTO', 'CATEGORY', 'UNITNAME', 'PARAM_TYPE', 'CONCEPTID']
+    d_items_cols = ['LABEL', 'ITEMID']
+    d_items = read_data(d_items_loc, columns=d_items_cols)
     d_items.columns = d_items.columns.str.lower()
     d_items.label = d_items.label.str.lower()
 
@@ -153,12 +154,11 @@ def main():
     chartevents_loc = os.path.join(args.datadir, "sepsis_chartevents.csv")
     chartevents = read_data(chartevents_loc)
     columns = ['hadm_id', 'charttime', 'label', 'valuenum']
-    import ipdb;
-    ipdb.set_trace()
+    import ipdb; ipdb.set_trace()
     wide_data = pd.pivot_table(chartevents[columns], index=['hadm_id', 'charttime'], columns='label', values='valuenum')
     wide_data = wide_data.reset_index(level=['hadm_id', 'charttime'])
 
-    sepsis_chartevents = wide_data.merge(joined_data, how='')
+    sepsis_chartevents = wide_data.merge(joined_data, how='inner')
 
 if __name__ == '__main__':
     main()
