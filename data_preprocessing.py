@@ -164,7 +164,8 @@ def main():
     sepsis_chartevents['before_suspected_infection_time'] = sepsis_chartevents['time_from_suspected_infection_time'] > 0
 
     static_vars = ['hadm_id', 'age', 'is_male', 'race_white', 'race_black', 'race_hispanic', 'race_other',
-                   'metastatic_cancer', 'diabetes', 'height', 'weight', 'bmi', 'elixhauser_hospital']
+                   'metastatic_cancer', 'diabetes', 'height', 'weight', 'bmi', 'elixhauser_hospital',
+                   'before_suspected_infection_time']
     sepsis_chartevents_static = sepsis_chartevents[static_vars].drop_duplicates()
 
     dynamic_vars = ['albumin', 'arterial blood pressure diastolic',
@@ -180,11 +181,12 @@ def main():
                     'ptt', 'respiratory rate', 'sodium', 'temperature celsius',
                     'total bilirubin']
 
+    group_vars = ['hadm_id', 'before_suspected_infection_time']
     for var in dynamic_vars:
         import ipdb; ipdb.set_trace()
-        group_vars = ['hadm_id', 'before_suspected_infection_time']
-        aggregated = sepsis_chartevents.group_by(group_vars)[var].mean()
+        aggregated = sepsis_chartevents.groupby(group_vars)[var].mean()
         aggregated = aggregated.reset_index(level=group_vars)
+        sepsis_chartevents_static = sepsis_chartevents_static.join(aggregated, on=group_vars)
 
 if __name__ == '__main__':
     main()
