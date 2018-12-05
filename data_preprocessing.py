@@ -12,6 +12,8 @@ def main():
                         help='path to the directory that contains the data')
     parser.add_argument('--chunksize', default=1000000, type=int,
                         help='chunksize')
+    parser.add_argument('--interpolate', default='linear', type=str,
+                        help='how to interpolate missing values')
     # Get arguments
     args = parser.parse_args()
 
@@ -149,25 +151,25 @@ def main():
     """"
     Organize by Patient
     """
-    chartevents_columns = ['hadm_id', 'charttime', 'label', 'valuenum']
-    chartevents_loc = os.path.join(args.datadir, "sepsis_chartevents.csv")
-    chartevents = read_data(chartevents_loc, columns=chartevents_columns)
-    chartevents_wide = pd.pivot_table(chartevents, index=['hadm_id', 'charttime'], columns='label', values='valuenum')
-    chartevents_wide = chartevents_wide.reset_index(level=['hadm_id', 'charttime'])
-
-    sepsis_chartevents = chartevents_wide.merge(joined_data, how='inner')
-    sepsis_chartevents['suspected_infection_time_poe'] = pd.to_datetime(sepsis_chartevents['suspected_infection_time_poe'])
-    sepsis_chartevents = sepsis_chartevents.dropna(subset=['suspected_infection_time_poe'])
-    sepsis_chartevents['charttime'] = pd.to_datetime(sepsis_chartevents['charttime'])
-    sepsis_chartevents['time_from_suspected_infection_time'] = sepsis_chartevents['suspected_infection_time_poe'] - sepsis_chartevents['charttime']
-    sepsis_chartevents['time_from_suspected_infection_time'] = sepsis_chartevents['time_from_suspected_infection_time'].dt.total_seconds().div(60).astype(int)
-    sepsis_chartevents['before_suspected_infection_time'] = sepsis_chartevents['time_from_suspected_infection_time'] > 0
-
+    # chartevents_columns = ['hadm_id', 'charttime', 'label', 'valuenum']
+    # chartevents_loc = os.path.join(args.datadir, "sepsis_chartevents.csv")
+    # chartevents = read_data(chartevents_loc, columns=chartevents_columns)
+    # chartevents_wide = pd.pivot_table(chartevents, index=['hadm_id', 'charttime'], columns='label', values='valuenum')
+    # chartevents_wide = chartevents_wide.reset_index(level=['hadm_id', 'charttime'])
+    #
+    # sepsis_chartevents = chartevents_wide.merge(joined_data, how='inner')
+    # sepsis_chartevents['suspected_infection_time_poe'] = pd.to_datetime(sepsis_chartevents['suspected_infection_time_poe'])
+    # sepsis_chartevents = sepsis_chartevents.dropna(subset=['suspected_infection_time_poe'])
+    # sepsis_chartevents['charttime'] = pd.to_datetime(sepsis_chartevents['charttime'])
+    # sepsis_chartevents['time_from_suspected_infection_time'] = sepsis_chartevents['suspected_infection_time_poe'] - sepsis_chartevents['charttime']
+    # sepsis_chartevents['time_from_suspected_infection_time'] = sepsis_chartevents['time_from_suspected_infection_time'].dt.total_seconds().div(60).astype(int)
+    # sepsis_chartevents['before_suspected_infection_time'] = sepsis_chartevents['time_from_suspected_infection_time'] > 0
+    #
     static_vars = ['hadm_id', 'age', 'is_male', 'race_white', 'race_black', 'race_hispanic', 'race_other',
                    'metastatic_cancer', 'diabetes', 'height', 'weight', 'bmi', 'elixhauser_hospital',
                    'before_suspected_infection_time']
-    sepsis_chartevents_static = sepsis_chartevents[static_vars].drop_duplicates()
-
+    # sepsis_chartevents_static = sepsis_chartevents[static_vars].drop_duplicates()
+    #
     dynamic_vars = ['albumin', 'arterial blood pressure diastolic',
                     'arterial blood pressure systolic', 'arterial paco2', 'arterial pao2',
                     'arterial ph', 'bun', 'calcium', 'chloride', 'creatinine', 'glucose',
@@ -180,16 +182,51 @@ def main():
                     'non invasive blood pressure systolic', 'platelets', 'potassium', 'pt',
                     'ptt', 'respiratory rate', 'sodium', 'temperature celsius',
                     'total bilirubin']
-
-    group_vars = ['hadm_id', 'before_suspected_infection_time']
-    for var in dynamic_vars:
-        import ipdb; ipdb.set_trace()
-        aggregated = sepsis_chartevents.groupby(group_vars)[var].mean()
-        aggregated = aggregated.reset_index(level=group_vars)
-        sepsis_chartevents_static = sepsis_chartevents_static.merge(aggregated, on=group_vars)
-
+    #
+    # group_vars = ['hadm_id', 'before_suspected_infection_time']
+    # for var in dynamic_vars:
+    #     aggregated = sepsis_chartevents.groupby(group_vars)[var].mean()
+    #     aggregated = aggregated.reset_index(level=group_vars)
+    #     sepsis_chartevents_static = sepsis_chartevents_static.merge(aggregated, on=group_vars)
+    #
     sepsis_chartevents_loc = os.path.join(args.datadir, "sepsis_aggregated.csv")
-    sepsis_chartevents_static.to_csv(sepsis_chartevents_loc, index=False)
+    # sepsis_chartevents_static.to_csv(sepsis_chartevents_loc, index=False)
 
-if __name__ == '__main__':
+    # Interpolate missing values
+    sepsis_aggregated = read_data(sepsis_chartevents_loc)
+    sepsis_aggregated_before = sepsis_aggregated[sepsis_aggregated['before_suspected_infection_time'] == 1]
+    sepsis_aggregated_before_int = sepsis_aggregated_before.interpolate(method=args.interpolate, limit_direction='both')
+    sepsis_aggregated_after = sepsis_aggregated[sepsis_aggregated['before_suspected_infection_time'] == 0]
+    sepsis_aggregated_after_int = sepsis_aggregated_after.interpolate(method=args.interpolate, limit_direction='both')
+
+    # Normalize continuous vars
+    dummy_vars = ['is_male', 'race_white', 'race_black', 'race_hispanic', 'race_other',
+                  'metastatic_cancer', 'diabetes']
+    vars_to_normalize = ['age', 'height', 'weight', 'bmi', 'elixhauser_hospital',
+                         'albumin', 'arterial blood pressure diastolic',
+                         'arterial blood pressure systolic', 'arterial paco2', 'arterial pao2',
+                         'arterial ph', 'bun', 'calcium', 'chloride', 'creatinine', 'glucose',
+                         'heart rate', 'hemoglobin', 'inr', 'ionized calcium', 'lactic acid',
+                         'magnesium', 'manual blood pressure diastolic left',
+                         'manual blood pressure diastolic right',
+                         'manual blood pressure systolic left',
+                         'manual blood pressure systolic right',
+                         'non invasive blood pressure diastolic',
+                         'non invasive blood pressure systolic', 'platelets', 'potassium', 'pt',
+                         'ptt', 'respiratory rate', 'sodium', 'temperature celsius',
+                         'total bilirubin']
+    sepsis_aggregated_before_int = sepsis_aggregated_before_int[dummy_vars + vars_to_normalize]
+    sepsis_aggregated_before_int[vars_to_normalize] = (sepsis_aggregated_before_int[vars_to_normalize] -
+                                                       sepsis_aggregated_before_int[vars_to_normalize].mean()) / \
+                                                       sepsis_aggregated_before_int[vars_to_normalize].std()
+    data_before_loc = os.path.join(args.datadir, "sepsis_before.csv")
+    sepsis_aggregated_before_int.to_csv(data_before_loc, index=False)
+    sepsis_aggregated_after_int = sepsis_aggregated_after_int[dummy_vars + vars_to_normalize]
+    sepsis_aggregated_after_int[vars_to_normalize] = (sepsis_aggregated_after_int[vars_to_normalize] -
+                                                      sepsis_aggregated_after_int[vars_to_normalize].mean()) / \
+                                                      sepsis_aggregated_after_int[vars_to_normalize].std()
+    data_after_loc = os.path.join(args.datadir, "sepsis_after.csv")
+    sepsis_aggregated_after_int.to_csv(data_after_loc, index=False)
+
+    if __name__ == '__main__':
     main()
