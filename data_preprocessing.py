@@ -83,12 +83,10 @@ def main():
     """
 
     # Admissions
-    cols = ['subject_id', 'hadm_id', 'admittime', 'dischtime',
-            'has_chartevents_data']
+    adm_cols = ['SUBJECT_ID', 'HADM_ID', 'ADMITTIME', 'DISCHTIME']
     admissions_loc = os.path.join(args.datadir, "ADMISSIONS.csv")
-    admissions = read_data(admissions_loc)
+    admissions = read_data(admissions_loc, columns=adm_cols)
     admissions.columns = admissions.columns.str.lower()
-
 
     """
     Sepsis Data
@@ -151,14 +149,42 @@ def main():
     """"
     Organize by Patient
     """
+    chartevents_columns = ['hadm_id', 'charttime', 'label', 'valuenum']
     chartevents_loc = os.path.join(args.datadir, "sepsis_chartevents.csv")
-    chartevents = read_data(chartevents_loc)
-    columns = ['hadm_id', 'charttime', 'label', 'valuenum']
-    import ipdb; ipdb.set_trace()
-    wide_data = pd.pivot_table(chartevents[columns], index=['hadm_id', 'charttime'], columns='label', values='valuenum')
-    wide_data = wide_data.reset_index(level=['hadm_id', 'charttime'])
+    chartevents = read_data(chartevents_loc, columns=chartevents_columns)
+    chartevents_wide = pd.pivot_table(chartevents, index=['hadm_id', 'charttime'], columns='label', values='valuenum')
+    chartevents_wide = chartevents_wide.reset_index(level=['hadm_id', 'charttime'])
 
-    sepsis_chartevents = wide_data.merge(joined_data, how='inner')
+    sepsis_chartevents = chartevents_wide.merge(joined_data, how='inner')
+    sepsis_chartevents['suspected_infection_time_poe'] = pd.to_datetime(sepsis_chartevents['suspected_infection_time_poe'])
+    sepsis_chartevents = sepsis_chartevents.dropna(subset=['suspected_infection_time_poe'])
+    sepsis_chartevents['charttime'] = pd.to_datetime(sepsis_chartevents['charttime'])
+    sepsis_chartevents['time_from_suspected_infection_time'] = sepsis_chartevents['suspected_infection_time_poe'] - sepsis_chartevents['charttime']
+    sepsis_chartevents['time_from_suspected_infection_time'] = sepsis_chartevents['time_from_suspected_infection_time'].dt.total_seconds().div(60).astype(int)
+    sepsis_chartevents['before_suspected_infection_time'] = sepsis_chartevents['time_from_suspected_infection_time'] > 0
+
+    static_vars = ['hadm_id', 'age', 'is_male', 'race_white', 'race_black', 'race_hispanic', 'race_other',
+                   'metastatic_cancer', 'diabetes', 'height', 'weight', 'bmi', 'elixhauser_hospital']
+    sepsis_chartevents_static = sepsis_chartevents[static_vars].drop_duplicates()
+
+    dynamic_vars = ['albumin', 'arterial blood pressure diastolic',
+                    'arterial blood pressure systolic', 'arterial paco2', 'arterial pao2',
+                    'arterial ph', 'bun', 'calcium', 'chloride', 'creatinine', 'glucose',
+                    'heart rate', 'hemoglobin', 'inr', 'ionized calcium', 'lactic acid',
+                    'magnesium', 'manual blood pressure diastolic left',
+                    'manual blood pressure diastolic right',
+                    'manual blood pressure systolic left',
+                    'manual blood pressure systolic right',
+                    'non invasive blood pressure diastolic',
+                    'non invasive blood pressure systolic', 'platelets', 'potassium', 'pt',
+                    'ptt', 'respiratory rate', 'sodium', 'temperature celsius',
+                    'total bilirubin']
+
+    for var in dynamic_vars:
+        import ipdb; ipdb.set_trace()
+        group_vars = ['hadm_id', 'before_suspected_infection_time']
+        aggregated = sepsis_chartevents.group_by(group_vars)[var].mean()
+        aggregated = aggregated.reset_index(level=group_vars)
 
 if __name__ == '__main__':
     main()
