@@ -1,19 +1,17 @@
-import torch
-import torch.nn as nn
-from torch.autograd import Variable
-
-from torchvision import transforms
-from torchvision import datasets as datasets_torch
-from torch.utils.data import DataLoader
-
 import argparse
 import json
-import numpy as np
 import time
+import numpy as np
+import importlib
 
-
+import torch
+from torch.autograd import Variable
+from torch.utils.data import DataLoader
+from torchvision import datasets as datasets_torch
+from torchvision import transforms
 
 from model import Expert, Discriminator
+
 
 def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args):
     print("Initializing expert {} as identity on preturbed data".format(i))
@@ -143,22 +141,16 @@ if __name__ == '__main__':
         # Pytorch dataset
         dataset = getattr(datasets_torch, args.dataset)
         train_transform = transforms.Compose([transforms.ToTensor()])
-        test_transform = transforms.Compose([transforms.ToTensor()])
         kwargs_train = {'download': True, 'transform': train_transform}
-        kwargs_test = {'download': True, 'transform': test_transform}
         dataset_train = dataset(root='{}/{}'.format(args.datadir, args.dataset), train=True, **kwargs_train)
-        dataset_test = dataset(root='{}/{}'.format(args.datadir, args.dataset), train=False, **kwargs_test)
     else:
         # Custom dataset
-        dataset_train = getattr(importlib.import_module('datasets.{}'.format(args.dataset)), 'Dataset')(args, train=True)
-        dataset_test = getattr(importlib.import_module('datasets.{}'.format(args.dataset)), 'Dataset')(args, train=False)
+        train_transform = transforms.Compose([transforms.ToTensor()])
+        dataset_train = getattr(importlib.import_module('data.{}'.format(args.dataset)), 'PatientsDataset')(args.datadir, train_transform)
 
     # Create Dataloader from dataset
     data_train = DataLoader(
         dataset_train, batch_size=args.batch_size, shuffle=True, num_workers=int(args.cuda), pin_memory=args.cuda
-    )
-    data_test = DataLoader(
-        dataset_test, batch_size=args.batch_size, shuffle=True, num_workers=int(args.cuda), pin_memory=args.cuda
     )
 
     # Model
