@@ -11,6 +11,7 @@ from torchvision import datasets as datasets_torch
 from torchvision import transforms
 
 from model import Expert, Discriminator
+from utils import LossReconstruction
 
 from tensorboardX import SummaryWriter
 
@@ -193,7 +194,7 @@ if __name__ == '__main__':
     discriminator = Discriminator(args).to(args.device)
 
     # Losses
-    loss_initial = torch.nn.MSELoss() # TODO: mean or sum reduction
+    loss_initial = getattr(LossReconstruction(args), 'MSE')
     criterion = torch.nn.BCELoss() # TODO: pick the right loss
 
     # Optimizers
