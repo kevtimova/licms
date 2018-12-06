@@ -1,8 +1,8 @@
 import argparse
 import json
 import time
-import numpy as np
 import importlib
+import os
 
 import torch
 from torch.autograd import Variable
@@ -12,6 +12,7 @@ from torchvision import transforms
 
 from model import Expert, Discriminator
 
+from tensorboardX import SummaryWriter
 
 def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args):
     print("Initializing expert {} as identity on preturbed data".format(i))
@@ -108,6 +109,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learning Independent Causal Mechanisms')
     parser.add_argument('--datadir', default='./data', type=str,
                         help='path to the directory that contains the data')
+    parser.add_argument('--outdir', default='.', type=str,
+                        help='path to the output directory')
     parser.add_argument('--dataset', default='patient_data', type=str,
                         help='name of the dataset')
     parser.add_argument('--optimizer', default='adam', type=str,
@@ -152,10 +155,21 @@ if __name__ == '__main__':
     # Experiment name
     timestamp = str(int(time.time()))
     if args.name == '':
-        args.name = '{}_{}'.format(args.dataset, timestamp)
+        name = '{}_n_exp_{}_bs_{}_lre_{}_lrd_{}_ei_{}_e_{}_{}'.format(
+            args.dataset, args.num_experts, args.batch_size, args.learning_rate_expert,
+            args.learning_rate_discriminator, args.epochs_init, args.epochs, timestamp)
+        args.name = name
     else:
         args.name = '{}_{}'.format(args.name, timestamp)
     print('\nExperiment: {}\n'.format(args.name))
+
+    # Logging. To run: tensorboard --logdir <args.outdir>/logs
+    log_dir = os.path.join(args.outdir, 'logs')
+    if not os.path.exists(log_dir):
+        os.mkdir(log_dir)
+    log_dir_exp = os.path.join(log_dir, args.name)
+    os.mkdir(log_dir_exp)
+    writer = SummaryWriter(log_dir=log_dir_exp)
 
     # Load dataset
     if args.dataset in dir(datasets_torch):
@@ -194,7 +208,6 @@ if __name__ == '__main__':
 
     # Training
     for epoch in range(args.epochs):
-
         train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, criterion, data_train, args)
 
 
