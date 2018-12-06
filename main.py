@@ -17,10 +17,10 @@ from tensorboardX import SummaryWriter
 def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writer):
     print("Initializing expert [{}] as identity on preturbed data".format(i+1))
     expert.train()
-    total_loss = 0
-    n_samples = 0
 
     for epoch in range(epochs):
+        total_loss = 0
+        n_samples = 0
         for batch in data_train:
             x_canonical, x_pret = batch
             batch_size = x_canonical.size(0)
