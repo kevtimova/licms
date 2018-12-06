@@ -25,8 +25,7 @@ def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writ
             x_canonical, x_pret = batch
             batch_size = x_canonical.size(0)
             n_samples += batch_size
-            x_pret = x_pret.view(x_pret.size(0), -1)
-            x_pret = Variable(x_pret).to(args.device)
+            x_pret = x_pret.view(x_pret.size(0), -1).to(args.device)
             x_hat = expert(x_pret)
             loss_rec = loss(x_pret, x_hat)
             total_loss += loss_rec.item()*batch_size
@@ -52,10 +51,8 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
         # x_pret = torch.randn(x_canon.size()) # TODO temporary since do not have the preturbed data yet
         batch_size = x_canon.size(0)
         n_samples += batch_size
-        x_canon = x_canon.view(batch_size, -1)
-        x_pret = x_pret.view(batch_size, -1)
-        x_canon = Variable(x_canon).to(args.device)
-        x_pret = Variable(x_pret).to(args.device)
+        x_canon = x_canon.view(batch_size, -1).to(args.device)
+        x_pret = x_pret.view(batch_size, -1).to(args.device)
 
         # Train Discriminator on canonical distribution
         scores = discriminator(x_canon)
@@ -192,8 +189,8 @@ if __name__ == '__main__':
     )
 
     # Model
-    experts = [Expert(args) for i in range(args.num_experts)]
-    discriminator = Discriminator(args)
+    experts = [Expert(args).to(args.device) for i in range(args.num_experts)]
+    discriminator = Discriminator(args).to(args.device)
 
     # Losses
     loss_initial = torch.nn.MSELoss() # TODO: mean or sum reduction
