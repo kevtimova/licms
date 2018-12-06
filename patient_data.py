@@ -17,8 +17,8 @@ class PatientsDataset(Dataset):
     def __getitem__(self, index):
         x_before = np.array(self.before_data.iloc[index])
         x_after = np.array(self.after_data.iloc[index])
-        x_before = torch.FloatTensor(x_before).to(self.args.device)
-        x_after = torch.FloatTensor(x_after).to(self.args.device)
+        x_before = torch.FloatTensor(x_before)
+        x_after = torch.FloatTensor(x_after)
         return (x_before, x_after)
 
     def __len__(self):
