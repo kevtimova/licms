@@ -15,7 +15,7 @@ from model import Expert, Discriminator
 from tensorboardX import SummaryWriter
 
 def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writer):
-    print("Initializing expert {} as identity on preturbed data".format(i))
+    print("Initializing expert [{}] as identity on preturbed data".format(i+1))
     expert.train()
     total_loss = 0
     n_samples = 0
@@ -25,10 +25,10 @@ def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writ
             x_canonical, x_pret = batch
             batch_size = x_canonical.size(0)
             n_samples += batch_size
-            x_canonical = x_canonical.view(x_canonical.size(0), -1)
-            x_canonical = Variable(x_canonical).to(args.device)
-            x_hat = expert(x_canonical)
-            loss_rec = loss(x_canonical, x_hat)
+            x_pret = x_pret.view(x_pret.size(0), -1)
+            x_pret = Variable(x_pret).to(args.device)
+            x_hat = expert(x_pret)
+            loss_rec = loss(x_pret, x_hat)
             total_loss += loss_rec.item()*batch_size
             optimizer.zero_grad()
             loss_rec.backward()
