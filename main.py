@@ -14,7 +14,7 @@ from model import Expert, Discriminator
 
 from tensorboardX import SummaryWriter
 
-def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args):
+def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writer):
     print("Initializing expert {} as identity on preturbed data".format(i))
     expert.train()
     total_loss = 0
@@ -36,9 +36,10 @@ def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args):
 
         # TODO: make sure loss is computed correctly
         mean_loss = total_loss/n_samples
-        print("epoch [{}] loss {:.4f}".format(epoch+1, mean_loss))
+        print("initialization epoch [{}] expert [{}] loss {:.4f}".format(epoch+1, i+1, mean_loss))
+        writer.add_scalar('expert_{}_initialization_loss'.format(i+1), mean_loss, epoch+1)
 
-def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, criterion, data_train, args):
+def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, criterion, data_train, args, writer):
     canonical_label = 1
     generated_label = 0
     total_loss_D_canon = 0
@@ -94,15 +95,18 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
                 loss_E.backward()
                 optimizers_E[i].step()
 
-    # TODO print losses
+    # Logging
     mean_loss_D_generated = total_loss_D_generated/n_samples
     mean_loss_D_canon = total_loss_D_canon/n_samples
-    print("epoch [{}] loss_D_generated {:.4f}: ".format(epoch+1, mean_loss_D_generated))
-    print("epoch [{}] loss_D_canon {:.4f}: ".format(epoch+1, mean_loss_D_canon))
+    print("epoch [{}] loss_D_generated {:.4f}".format(epoch+1, mean_loss_D_generated))
+    print("epoch [{}] loss_D_canon {:.4f}".format(epoch+1, mean_loss_D_canon))
+    writer.add_scalar('loss_D_canonical', mean_loss_D_canon, epoch+1)
+    writer.add_scalar('loss_D_generated', mean_loss_D_generated, epoch+1)
     for i in range(len(experts)):
         if total_samples_expert[i]> 0:
             mean_loss_expert = total_loss_expert[i]/total_samples_expert[i]
-            print("epoch [{}] expert [{}] {:.4f}: ".format(epoch+1, i+1, mean_loss_expert))
+            print("epoch [{}] expert [{}] loss {:.4f}".format(epoch+1, i+1, mean_loss_expert))
+            writer.add_scalar('expert_{}_loss'.format(i+1), mean_loss_expert, epoch+1)
 
 if __name__ == '__main__':
     # Arguments
@@ -204,10 +208,10 @@ if __name__ == '__main__':
 
     # Initialize Experts as approximately Identity
     for i, expert in enumerate(experts):
-        initialize_expert(args.epochs_init, expert, i, optimizers_E[i], loss_initial, data_train, args)
+        initialize_expert(args.epochs_init, expert, i, optimizers_E[i], loss_initial, data_train, args, writer)
 
     # Training
     for epoch in range(args.epochs):
-        train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, criterion, data_train, args)
+        train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, criterion, data_train, args, writer)
 
 
