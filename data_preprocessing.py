@@ -259,5 +259,5 @@ def main():
     data_after_loc = os.path.join(args.datadir, "sepsis_after.csv")
     sepsis_aggregated_after_int.to_csv(data_after_loc, index=False, header=False)
 
-    if __name__ == '__main__':
-        main()
+if __name__ == '__main__':
+    main()
