@@ -106,6 +106,7 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
             print("epoch [{}] expert [{}] loss {:.4f}".format(epoch+1, i+1, mean_loss_expert))
             writer.add_scalar('expert_{}_loss'.format(i+1), mean_loss_expert, epoch+1)
 
+
 if __name__ == '__main__':
     # Arguments
     parser = argparse.ArgumentParser(description='Learning Independent Causal Mechanisms')
@@ -173,6 +174,11 @@ if __name__ == '__main__':
     os.mkdir(log_dir_exp)
     writer = SummaryWriter(log_dir=log_dir_exp)
 
+    # Directory for checkpoints
+    checkpt_dir = os.path.join(args.outdir, 'checkpoints')
+    if not os.path.exists(checkpt_dir):
+        os.mkdir(checkpt_dir)
+
     # Load dataset
     if args.dataset in dir(datasets_torch):
         # Pytorch dataset
@@ -212,4 +218,7 @@ if __name__ == '__main__':
     for epoch in range(args.epochs):
         train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, criterion, data_train, args, writer)
 
-
+        if epoch % args.log_interval == 0 or epoch == args.epochs-1:
+            torch.save(discriminator.state_dict(), checkpt_dir + '/{}_D.pth'.format(args.name))
+            for i in range(args.num_experts):
+                torch.save(experts[i].state_dict(), checkpt_dir + '/{}_E_{}.pth'.format(args.name, i+1))
