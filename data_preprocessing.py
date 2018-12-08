@@ -172,19 +172,19 @@ def main():
     # sofa_patients_output = os.path.join(args.datadir, "sofa_patients.csv")
     # sofa_patients.to_csv(sofa_patients_output, index=False)
 
-    """
-    INPUTEVENTS_CV
-    """
-    input_events_cv_loc = os.path.join(args.datadir, "INPUTEVENTS_CV.csv")
-    sofa_patients = pd.DataFrame()
-    for i, chunk in enumerate(read_data(input_events_cv_loc, chunksize=args.chunksize)):
-        print("Merging chunk {} ...".format(i+1))
-        chunk.columns = chunk.columns.str.lower()
-        filtered_chunk = chunk.merge(d_items_final, on=['itemid'], how='inner')
-        filtered_chunk = filtered_chunk[filtered_chunk['itemid'] == 227428][['subject_id', 'hadm_id']].drop_duplicates()
-        sofa_patients = sofa_patients.append(filtered_chunk)
-    sofa_patients_output = os.path.join(args.datadir, "sofa_patients.csv")
-    sofa_patients.to_csv(sofa_patients_output, index=False)
+    # """
+    # INPUTEVENTS_CV
+    # """
+    # input_events_cv_loc = os.path.join(args.datadir, "INPUTEVENTS_CV.csv")
+    # sofa_patients = pd.DataFrame()
+    # for i, chunk in enumerate(read_data(input_events_cv_loc, chunksize=args.chunksize)):
+    #     print("Merging chunk {} ...".format(i+1))
+    #     chunk.columns = chunk.columns.str.lower()
+    #     filtered_chunk = chunk.merge(d_items_final, on=['itemid'], how='inner')
+    #     filtered_chunk = filtered_chunk[filtered_chunk['itemid'] == 227428][['subject_id', 'hadm_id']].drop_duplicates()
+    #     sofa_patients = sofa_patients.append(filtered_chunk)
+    # sofa_patients_output = os.path.join(args.datadir, "sofa_patients.csv")
+    # sofa_patients.to_csv(sofa_patients_output, index=False)
 
 
     # """
@@ -212,14 +212,15 @@ def main():
     """"
     Organize by Patient
     """
-    # chartevents_columns = ['hadm_id', 'charttime', 'label', 'valuenum']
-    # chartevents_loc = os.path.join(args.datadir, "sepsis_chartevents.csv")
-    # chartevents = read_data(chartevents_loc, columns=chartevents_columns)
-    # chartevents_wide = pd.pivot_table(chartevents, index=['hadm_id', 'charttime'], columns='label', values='valuenum')
-    # chartevents_wide = chartevents_wide.reset_index(level=['hadm_id', 'charttime'])
-    #
-    # sepsis_chartevents = chartevents_wide.merge(joined_data, how='inner')
-    # sepsis_chartevents['suspected_infection_time_poe'] = pd.to_datetime(sepsis_chartevents['suspected_infection_time_poe'])
+    chartevents_columns = ['hadm_id', 'charttime', 'label', 'valuenum']
+    chartevents_loc = os.path.join(args.datadir, "sepsis_chartevents.csv")
+    chartevents = read_data(chartevents_loc, columns=chartevents_columns)
+    chartevents_wide = pd.pivot_table(chartevents, index=['hadm_id', 'charttime'], columns='label', values='valuenum')
+    chartevents_wide = chartevents_wide.reset_index(level=['hadm_id', 'charttime'])
+
+    sepsis_chartevents = chartevents_wide.merge(joined_data, how='inner')
+    sepsis_chartevents['suspected_infection_time_poe'] = pd.to_datetime(sepsis_chartevents['suspected_infection_time_poe'])
+    import ipdb; ipdb.set_trace()
     # sepsis_chartevents = sepsis_chartevents.dropna(subset=['suspected_infection_time_poe'])
     # sepsis_chartevents['charttime'] = pd.to_datetime(sepsis_chartevents['charttime'])
     # sepsis_chartevents['time_from_suspected_infection_time'] = sepsis_chartevents['suspected_infection_time_poe'] - sepsis_chartevents['charttime']
