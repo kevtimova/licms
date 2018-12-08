@@ -157,28 +157,41 @@ def main():
     # chartevents_output = os.path.join(args.datadir, "sepsis_chartevents.csv")
     # chartevents.to_csv(chartevents_output, index=False)
 
+    # """
+    # CHARTEVENTS
+    # """
+    # chartevents_loc = os.path.join(args.datadir, "CHARTEVENTS.csv")
+    # sofa_patients = pd.DataFrame()
+    # for i, chunk in enumerate(read_data(chartevents_loc, chunksize=args.chunksize)):
+    #     print("Merging chunk {} ...".format(i+1))
+    #     chunk.columns = chunk.columns.str.lower()
+    #     filtered_chunk = chunk.merge(d_items_final, on=['itemid'], how='inner')
+    #     # merged_chunk = filtered_chunk[['subject_id', 'hadm_id']].drop_duplicates()
+    #     filtered_chunk = filtered_chunk[filtered_chunk['itemid'] == 227428][['subject_id', 'hadm_id']].drop_duplicates()
+    #     sofa_patients = sofa_patients.append(filtered_chunk)
+    # sofa_patients_output = os.path.join(args.datadir, "sofa_patients.csv")
+    # sofa_patients.to_csv(sofa_patients_output, index=False)
+
     """
-    CHARTEVENTS
+    INPUTEVENTS_CV
     """
-    chartevents_loc = os.path.join(args.datadir, "CHARTEVENTS.csv")
+    input_events_cv_loc = os.path.join(args.datadir, "INPUTEVENTS_CV.csv")
     sofa_patients = pd.DataFrame()
-    for i, chunk in enumerate(read_data(chartevents_loc, chunksize=args.chunksize)):
+    for i, chunk in enumerate(read_data(input_events_cv_loc, chunksize=args.chunksize)):
         print("Merging chunk {} ...".format(i+1))
         chunk.columns = chunk.columns.str.lower()
         filtered_chunk = chunk.merge(d_items_final, on=['itemid'], how='inner')
-        # merged_chunk = filtered_chunk[['subject_id', 'hadm_id']].drop_duplicates()
         filtered_chunk = filtered_chunk[filtered_chunk['itemid'] == 227428][['subject_id', 'hadm_id']].drop_duplicates()
         sofa_patients = sofa_patients.append(filtered_chunk)
     sofa_patients_output = os.path.join(args.datadir, "sofa_patients.csv")
     sofa_patients.to_csv(sofa_patients_output, index=False)
 
+
     # """
-    # LABITEMS and LABEVENTS
+    # LABITEMS
     # """
     # labitems_loc = os.path.join(args.datadir, "D_LABITEMS.csv")
     # labitems = read_data(labitems_loc)
-    #
-    # labevents_loc = os.path.join(args.datadir, "D_LABITEMS.csv")
 
     # """
     # LABEVENTS.csv
