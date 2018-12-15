@@ -23,12 +23,12 @@ def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writ
         total_loss = 0
         n_samples = 0
         for batch in data_train:
-            x_canonical, x_pret = batch
+            x_canonical, x_transf = batch
             batch_size = x_canonical.size(0)
             n_samples += batch_size
-            x_pret = x_pret.view(x_pret.size(0), -1).to(args.device)
-            x_hat = expert(x_pret)
-            loss_rec = loss(x_pret, x_hat)
+            x_transf = x_transf.view(x_transf.size(0), -1).to(args.device)
+            x_hat = expert(x_transf)
+            loss_rec = loss(x_transf, x_hat)
             total_loss += loss_rec.item()*batch_size
             optimizer.zero_grad()
             loss_rec.backward()
@@ -74,7 +74,7 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
 
         # Train Discriminator on experts output
         labels.fill_(transformed_label)
-        loss_D_transformed = 0 # TODO make compatible with output
+        loss_D_transformed = 0
         expert_scores = []
         for i, expert in enumerate(experts):
             output = expert(x_transf)
