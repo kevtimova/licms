@@ -34,7 +34,7 @@ def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writ
             loss_rec.backward()
             optimizer.step()
 
-        # TODO: make sure loss is computed correctly
+        # Loss
         mean_loss = total_loss/n_samples
         print("initialization epoch [{}] expert [{}] loss {:.4f}".format(epoch+1, i+1, mean_loss))
         writer.add_scalar('expert_{}_initialization_loss'.format(i+1), mean_loss, epoch+1)
@@ -206,7 +206,13 @@ if __name__ == '__main__':
     # Optimizers
     optimizers_E = []
     for i in range(args.num_experts):
-        optimizer_E = torch.optim.Adam(experts[i].parameters(), lr=args.learning_rate_expert, weight_decay=args.weight_decay)
+        if args.optimizer == 'adam':
+            optimizer_E = torch.optim.Adam(experts[i].parameters(), lr=args.learning_rate_expert, weight_decay=args.weight_decay)
+        elif args.optimizer == 'sgd':
+            optimizer_E = torch.optim.SGD(experts[i].parameters(), lr=args.learning_rate_expert,
+                                          weight_decay=args.weight_decay)
+        else:
+            raise NotImplementedError
         optimizers_E.append(optimizer_E)
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=args.learning_rate_discriminator, weight_decay=args.weight_decay)
 
