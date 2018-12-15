@@ -14,7 +14,7 @@ class Expert(nn.Module):
             layers.append(nn.LeakyReLU(0.2, inplace=True))
             return layers
 
-        self.model = nn.Sequential(
+        self.model_mnist = nn.Sequential(
             *block(self.args.input_size, 128, normalize=False),
             *block(128, 256),
             *block(256, 512),
@@ -23,8 +23,18 @@ class Expert(nn.Module):
             nn.Tanh()
         )
 
+        self.model_patient = nn.Sequential(
+            *block(self.args.input_size, 64, normalize=False),
+            *block(64, int(self.args.input_size))
+        )
+
     def forward(self, input):
-        output = self.model(input)
+        if self.args.dataset == 'MNIST':
+            output = self.model_mnist(input)
+        elif self.args.dataset == 'patient_data':
+            output = self.model_patient(input)
+        else:
+            raise NotImplementedError
         return output
 
 
