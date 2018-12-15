@@ -40,20 +40,29 @@ def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writ
         writer.add_scalar('expert_{}_initialization_loss'.format(i+1), mean_loss, epoch+1)
 
 def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, criterion, data_train, args, writer):
+    discriminator.train()
+    for i, expert in enumerate(experts):
+        expert.train()
+
+    # Labels for canonical vs transformed samples
     canonical_label = 1
-    generated_label = 0
+    transformed_label = 0
+
+    # Keep track of losses
     total_loss_D_canon = 0
-    total_loss_D_generated = 0
+    total_loss_D_transformed = 0
     n_samples = 0
     total_loss_expert = [0 for i in range(len(experts))]
     total_samples_expert = [0 for i in range(len(experts))]
+
+    # Iterate through data
     for batch in data_train:
-        x_canon, x_pret = batch
-        # x_pret = torch.randn(x_canon.size()) # TODO temporary since do not have the preturbed data yet
+        x_canon, x_transf = batch
+        # x_transf = torch.randn(x_canon.size()) # TODO temporary since do not have the preturbed data yet
         batch_size = x_canon.size(0)
         n_samples += batch_size
         x_canon = x_canon.view(batch_size, -1).to(args.device)
-        x_pret = x_pret.view(batch_size, -1).to(args.device)
+        x_transf = x_transf.view(batch_size, -1).to(args.device)
 
         # Train Discriminator on canonical distribution
         scores = discriminator(x_canon)
@@ -64,42 +73,44 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
         loss_D_canon.backward()
 
         # Train Discriminator on experts output
-        labels.fill_(generated_label)
-        loss_D_generated = 0 # TODO make compatible with output
+        labels.fill_(transformed_label)
+        loss_D_transformed = 0 # TODO make compatible with output
         expert_scores = []
         for i, expert in enumerate(experts):
-            output = expert(x_pret)
+            output = expert(x_transf)
             scores = discriminator(output.detach())
             expert_scores.append(scores)
-            loss_D_generated += criterion(scores, labels)
-        loss_D_generated = loss_D_generated / args.num_experts
-        total_loss_D_generated += loss_D_generated.item()*batch_size
-        loss_D_generated.backward()
+            loss_D_transformed += criterion(scores, labels)
+        loss_D_transformed = loss_D_transformed / args.num_experts
+        total_loss_D_transformed += loss_D_transformed.item() * batch_size
+        loss_D_transformed.backward()
         optimizer_D.step()
 
+        # Train experts
         expert_scores = torch.cat(expert_scores, dim=1)
         mask_winners = expert_scores.argmax(dim=1)
+
         # Update each expert on samples it won
         for i, expert in enumerate(experts):
             winning_indexes = mask_winners.eq(i).nonzero().squeeze(dim=-1)
             n_expert_samples = winning_indexes.size(0)
             total_samples_expert[i] += n_expert_samples
             if n_expert_samples > 0:
-                samples = x_pret[winning_indexes]
+                samples = x_transf[winning_indexes]
                 labels = torch.full((n_expert_samples,), canonical_label, device=args.device).unsqueeze(dim=1)
-                optimizers_E[i].zero_grad()
                 loss_E = criterion(discriminator(samples), labels)
                 total_loss_expert[i] += loss_E.item()*n_expert_samples
+                optimizers_E[i].zero_grad()
                 loss_E.backward()
                 optimizers_E[i].step()
 
     # Logging
-    mean_loss_D_generated = total_loss_D_generated/n_samples
+    mean_loss_D_generated = total_loss_D_transformed/n_samples
     mean_loss_D_canon = total_loss_D_canon/n_samples
-    print("epoch [{}] loss_D_generated {:.4f}".format(epoch+1, mean_loss_D_generated))
+    print("epoch [{}] loss_D_transformed {:.4f}".format(epoch+1, mean_loss_D_generated))
     print("epoch [{}] loss_D_canon {:.4f}".format(epoch+1, mean_loss_D_canon))
     writer.add_scalar('loss_D_canonical', mean_loss_D_canon, epoch+1)
-    writer.add_scalar('loss_D_generated', mean_loss_D_generated, epoch+1)
+    writer.add_scalar('loss_D_transformed', mean_loss_D_generated, epoch+1)
     for i in range(len(experts)):
         if total_samples_expert[i]> 0:
             mean_loss_expert = total_loss_expert[i]/total_samples_expert[i]
