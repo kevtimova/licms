@@ -45,7 +45,7 @@ class Discriminator(nn.Module):
         self.args = args
 
         # Architecture
-        self.model = nn.Sequential(
+        self.model_mnist = nn.Sequential(
             nn.Linear(self.args.input_size, 512),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 256),
@@ -54,6 +54,16 @@ class Discriminator(nn.Module):
             nn.Sigmoid()
         )
 
+        self.model_patient = nn.Sequential(
+            nn.Linear(self.args.input_size, 128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(128, 1),
+            nn.Sigmoid()
+        )
+
     def forward(self, input):
-        validity = self.model(input)
+        if self.args.dataset == 'MNIST':
+            validity = self.model_mnist(input)
+        elif self.args.dataset == 'patient_data':
+            validity = self.model_patient(input)
         return validity
