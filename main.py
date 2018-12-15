@@ -127,7 +127,11 @@ if __name__ == '__main__':
                         help='path to the output directory')
     parser.add_argument('--dataset', default='patient_data', type=str,
                         help='name of the dataset')
-    parser.add_argument('--optimizer', default='adam', type=str,
+    parser.add_argument('--optimizer_experts', default='adam', type=str,
+                        help='optimization algorithm (options: sgd | adam, default: adam)')
+    parser.add_argument('--optimizer_discriminator', default='adam', type=str,
+                        help='optimization algorithm (options: sgd | adam, default: adam)')
+    parser.add_argument('--optimizer_initialize', default='adam', type=str,
                         help='optimization algorithm (options: sgd | adam, default: adam)')
     parser.add_argument('--batch_size', type=int, default=128, metavar='N',
                         help='input batch size for training (default: 128)')
@@ -214,22 +218,37 @@ if __name__ == '__main__':
     loss_initial = getattr(LossReconstruction(args), 'MSE')
     criterion = torch.nn.BCELoss() # TODO: pick the right loss
 
+    # Initialize Experts as approximately Identity
+    for i, expert in enumerate(experts):
+        if args.optimizer_initialize == 'adam':
+            optimizer_E = torch.optim.Adam(expert.parameters(), lr=args.learning_rate_expert,
+                                           weight_decay=args.weight_decay)
+        elif args.optimizer_initialize == 'sgd':
+            optimizer_E = torch.optim.SGD(expert.parameters(), lr=args.learning_rate_expert,
+                                          weight_decay=args.weight_decay)
+        else:
+            raise NotImplementedError
+        initialize_expert(args.epochs_init, expert, i, optimizer_E, loss_initial, data_train, args, writer)
+
     # Optimizers
     optimizers_E = []
     for i in range(args.num_experts):
-        if args.optimizer == 'adam':
-            optimizer_E = torch.optim.Adam(experts[i].parameters(), lr=args.learning_rate_expert, weight_decay=args.weight_decay)
-        elif args.optimizer == 'sgd':
+        if args.optimizer_experts == 'adam':
+            optimizer_E = torch.optim.Adam(experts[i].parameters(), lr=args.learning_rate_expert,
+                                           weight_decay=args.weight_decay)
+        elif args.optimizer_experts == 'sgd':
             optimizer_E = torch.optim.SGD(experts[i].parameters(), lr=args.learning_rate_expert,
                                           weight_decay=args.weight_decay)
         else:
             raise NotImplementedError
         optimizers_E.append(optimizer_E)
-    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=args.learning_rate_discriminator, weight_decay=args.weight_decay)
+    if args.optimizer_discriminator == 'adam':
+        optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=args.learning_rate_discriminator,
+                                       weight_decay=args.weight_decay)
+    elif args.optimizer_discriminator == 'sgd':
+        optimizer_D = torch.optim.SGD(discriminator.parameters(), lr=args.learning_rate_discriminator,
+                                       weight_decay=args.weight_decay)
 
-    # Initialize Experts as approximately Identity
-    for i, expert in enumerate(experts):
-        initialize_expert(args.epochs_init, expert, i, optimizers_E[i], loss_initial, data_train, args, writer)
 
     # Training
     for epoch in range(args.epochs):
