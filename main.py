@@ -226,7 +226,7 @@ if __name__ == '__main__':
             optimizer_E = torch.optim.Adam(expert.parameters(), lr=args.learning_rate_initialize,
                                            weight_decay=args.weight_decay)
         elif args.optimizer_initialize == 'sgd':
-            optimizer_E = torch.optim.SGD(expert.parameters(), lr=args.learning_rate_expert,
+            optimizer_E = torch.optim.SGD(expert.parameters(), lr=args.learning_rate_initialize,
                                           weight_decay=args.weight_decay)
         else:
             raise NotImplementedError
