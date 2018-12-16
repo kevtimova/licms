@@ -190,9 +190,11 @@ if __name__ == '__main__':
     # Experiment name
     timestamp = str(int(time.time()))
     if args.name == '':
-        name = '{}_n_exp_{}_bs_{}_lre_{}_lrd_{}_ei_{}_e_{}_{}'.format(
-            args.dataset, args.num_experts, args.batch_size, args.learning_rate_expert,
-            args.learning_rate_discriminator, args.epochs_init, args.epochs, timestamp)
+        name = '{}_n_exp_{}_bs_{}_lri_{}_lre_{}_lrd_{}_ei_{}_e_{}_oi_{}_oe_{}_oe_{}_{}'.format(
+            args.dataset, args.num_experts, args.batch_size, args.learning_rate_initialize,
+            args.learning_rate_expert, args.learning_rate_discriminator, args.epochs_init,
+            args.epochs, args.optimizer_initialize, args.optimizer_experts, args.optimizer_discriminator,
+            timestamp)
         args.name = name
     else:
         args.name = '{}_{}'.format(args.name, timestamp)
