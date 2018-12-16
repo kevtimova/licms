@@ -28,7 +28,7 @@ def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writ
             n_samples += batch_size
             x_transf = x_transf.view(x_transf.size(0), -1).to(args.device)
             x_hat = expert(x_transf)
-            loss_rec = loss(x_transf, x_hat)
+            loss_rec = loss(x_hat, x_transf)
             total_loss += loss_rec.item()*batch_size
             optimizer.zero_grad()
             loss_rec.backward()
@@ -147,6 +147,8 @@ if __name__ == '__main__':
                         help='random seed (default: 11)')
     parser.add_argument('--log_interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
+    parser.add_argument('--learning_rate_initialize', type=float, default=1e-1,
+                        help='size of expert learning rate')
     parser.add_argument('--learning_rate_expert', type=float, default=1e-3,
                         help='size of expert learning rate')
     parser.add_argument('--learning_rate_discriminator', type=float, default=1e-3,
@@ -221,7 +223,7 @@ if __name__ == '__main__':
     # Initialize Experts as approximately Identity
     for i, expert in enumerate(experts):
         if args.optimizer_initialize == 'adam':
-            optimizer_E = torch.optim.Adam(expert.parameters(), lr=args.learning_rate_expert,
+            optimizer_E = torch.optim.Adam(expert.parameters(), lr=args.learning_rate_initialize,
                                            weight_decay=args.weight_decay)
         elif args.optimizer_initialize == 'sgd':
             optimizer_E = torch.optim.SGD(expert.parameters(), lr=args.learning_rate_expert,
