@@ -14,27 +14,25 @@ class Expert(nn.Module):
             layers.append(nn.LeakyReLU(0.2, inplace=True))
             return layers
 
-        self.model_mnist = nn.Sequential(
-            *block(self.args.input_size, 128, normalize=False),
-            *block(128, 256),
-            *block(256, 512),
-            *block(512, 1024),
-            nn.Linear(1024, int(self.args.input_size)),
-            nn.Tanh()
-        )
-
-        self.model_patient = nn.Sequential(
-            *block(self.args.input_size, 64, normalize=False),
-            *block(64, int(self.args.input_size))
-        )
-
-    def forward(self, input):
         if self.args.dataset == 'MNIST':
-            output = self.model_mnist(input)
-        elif self.args.dataset == 'patient_data':
-            output = self.model_patient(input)
+            self.model = nn.Sequential(
+                *block(self.args.input_size, 128, normalize=False),
+                *block(128, 256),
+                *block(256, 512),
+                *block(512, 1024),
+                nn.Linear(1024, int(self.args.input_size)),
+                nn.Tanh()
+            )
+        elif self.args.dataset == 'patient':
+            self.model = nn.Sequential(
+                *block(self.args.input_size, 64, normalize=False),
+                *block(64, int(self.args.input_size))
+            )
         else:
             raise NotImplementedError
+
+    def forward(self, input):
+        output = self.model(input)
         return output
 
 
@@ -45,25 +43,25 @@ class Discriminator(nn.Module):
         self.args = args
 
         # Architecture
-        self.model_mnist = nn.Sequential(
-            nn.Linear(self.args.input_size, 512),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(512, 256),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(256, 1),
-            nn.Sigmoid()
-        )
-
-        self.model_patient = nn.Sequential(
-            nn.Linear(self.args.input_size, 128),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(128, 1),
-            nn.Sigmoid()
-        )
+        if self.args.dataset == 'MNIST':
+            self.model = nn.Sequential(
+                nn.Linear(self.args.input_size, 512),
+                nn.LeakyReLU(0.2, inplace=True),
+                nn.Linear(512, 256),
+                nn.LeakyReLU(0.2, inplace=True),
+                nn.Linear(256, 1),
+                nn.Sigmoid()
+            )
+        elif self.args.dataset == 'patient':
+            self.model = nn.Sequential(
+                nn.Linear(self.args.input_size, 128),
+                nn.LeakyReLU(0.2, inplace=True),
+                nn.Linear(128, 1),
+                nn.Sigmoid()
+            )
+        else:
+            raise NotImplementedError
 
     def forward(self, input):
-        if self.args.dataset == 'MNIST':
-            validity = self.model_mnist(input)
-        elif self.args.dataset == 'patient_data':
-            validity = self.model_patient(input)
+        validity = self.model(input)
         return validity
