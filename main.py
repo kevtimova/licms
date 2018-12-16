@@ -1,19 +1,18 @@
 import argparse
-import json
-import time
 import importlib
+import json
 import os
+import time
 
 import torch
-from torch.autograd import Variable
+from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 from torchvision import datasets as datasets_torch
 from torchvision import transforms
 
 from model import Expert, Discriminator
-from utils import LossReconstruction
+from utils import init_weights
 
-from tensorboardX import SummaryWriter
 
 def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writer):
     print("Initializing expert [{}] as identity on preturbed data".format(i+1))
@@ -39,6 +38,8 @@ def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writ
         print("initialization epoch [{}] expert [{}] loss {:.4f}".format(epoch+1, i+1, mean_loss))
         writer.add_scalar('expert_{}_initialization_loss'.format(i+1), mean_loss, epoch+1)
 
+    torch.save(expert.state_dict(), checkpt_dir + '/{}_E_{}_init.pth'.format(args.name, i + 1))
+
 def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, criterion, data_train, args, writer):
     discriminator.train()
     for i, expert in enumerate(experts):
@@ -54,6 +55,7 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
     n_samples = 0
     total_loss_expert = [0 for i in range(len(experts))]
     total_samples_expert = [0 for i in range(len(experts))]
+    expert_scores_D = [0 for i in range(len(experts))]
 
     # Iterate through data
     for batch in data_train:
@@ -65,28 +67,31 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
         x_transf = x_transf.view(batch_size, -1).to(args.device)
 
         # Train Discriminator on canonical distribution
-        scores = discriminator(x_canon)
+        scores_canon = discriminator(x_canon)
         labels = torch.full((batch_size,), canonical_label, device=args.device).unsqueeze(dim=1)
-        loss_D_canon = criterion(scores, labels)
-        total_loss_D_canon += loss_D_canon.item()*batch_size
+        loss_D_canon = criterion(scores_canon, labels)
+        total_loss_D_canon += loss_D_canon.item() * batch_size
         optimizer_D.zero_grad()
         loss_D_canon.backward()
 
         # Train Discriminator on experts output
         labels.fill_(transformed_label)
         loss_D_transformed = 0
+        exp_outputs = []
         expert_scores = []
         for i, expert in enumerate(experts):
-            output = expert(x_transf)
-            scores = discriminator(output.detach())
-            expert_scores.append(scores)
-            loss_D_transformed += criterion(scores, labels)
+            exp_output = expert(x_transf)
+            exp_outputs.append(exp_output.view(batch_size, 1, args.input_size))
+            exp_scores = discriminator(exp_output.detach())
+            expert_scores.append(exp_scores)
+            loss_D_transformed += criterion(exp_scores, labels)
         loss_D_transformed = loss_D_transformed / args.num_experts
         total_loss_D_transformed += loss_D_transformed.item() * batch_size
         loss_D_transformed.backward()
         optimizer_D.step()
 
         # Train experts
+        exp_outputs = torch.cat(exp_outputs, dim=1)
         expert_scores = torch.cat(expert_scores, dim=1)
         mask_winners = expert_scores.argmax(dim=1)
 
@@ -96,26 +101,32 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
             n_expert_samples = winning_indexes.size(0)
             if n_expert_samples > 0:
                 total_samples_expert[i] += n_expert_samples
-                samples = x_transf[winning_indexes]
-                labels = torch.full((n_expert_samples,), canonical_label, device=args.device).unsqueeze(dim=1)
-                loss_E = criterion(discriminator(samples), labels)
-                total_loss_expert[i] += loss_E.item()*n_expert_samples
+                exp_samples = exp_outputs[winning_indexes, i]
+                D_E_x_transf = discriminator(exp_samples)
+                labels = torch.full((n_expert_samples,), canonical_label,
+                                    device=args.device).unsqueeze(dim=1)
+                loss_E = criterion(D_E_x_transf, labels)
+                total_loss_expert[i] += loss_E.item() * n_expert_samples
                 optimizers_E[i].zero_grad()
-                loss_E.backward()
+                loss_E.backward(retain_graph=True) # TODO figure out why retain graph is necessary
                 optimizers_E[i].step()
+                expert_scores_D[i] += D_E_x_transf.squeeze().sum().item()
 
     # Logging
-    mean_loss_D_generated = total_loss_D_transformed/n_samples
-    mean_loss_D_canon = total_loss_D_canon/n_samples
-    print("epoch [{}] loss_D_transformed {:.4f}".format(epoch+1, mean_loss_D_generated))
-    print("epoch [{}] loss_D_canon {:.4f}".format(epoch+1, mean_loss_D_canon))
-    writer.add_scalar('loss_D_canonical', mean_loss_D_canon, epoch+1)
-    writer.add_scalar('loss_D_transformed', mean_loss_D_generated, epoch+1)
+    mean_loss_D_generated = total_loss_D_transformed / n_samples
+    mean_loss_D_canon = total_loss_D_canon / n_samples
+    print("epoch [{}] loss_D_transformed {:.4f}".format(epoch + 1, mean_loss_D_generated))
+    print("epoch [{}] loss_D_canon {:.4f}".format(epoch + 1, mean_loss_D_canon))
+    writer.add_scalar('loss_D_canonical', mean_loss_D_canon, epoch + 1)
+    writer.add_scalar('loss_D_transformed', mean_loss_D_generated, epoch + 1)
     for i in range(len(experts)):
         if total_samples_expert[i]> 0:
-            mean_loss_expert = total_loss_expert[i]/total_samples_expert[i]
-            print("epoch [{}] expert [{}] loss {:.4f}".format(epoch+1, i+1, mean_loss_expert))
-            writer.add_scalar('expert_{}_loss'.format(i+1), mean_loss_expert, epoch+1)
+            mean_loss_expert = total_loss_expert[i] / total_samples_expert[i]
+            mean_expert_scores = expert_scores_D[i] / total_samples_expert[i]
+            print("epoch [{}] expert [{}] loss {:.4f}".format(epoch + 1, i + 1, mean_loss_expert))
+            print("epoch [{}] expert [{}] scores {:.4f}".format(epoch + 1, i + 1, mean_expert_scores))
+            writer.add_scalar('expert_{}_loss'.format(i + 1), mean_loss_expert, epoch + 1)
+            writer.add_scalar('expert_{}_scores'.format(i + 1), mean_expert_scores, epoch + 1)
 
 
 if __name__ == '__main__':
@@ -125,7 +136,7 @@ if __name__ == '__main__':
                         help='path to the directory that contains the data')
     parser.add_argument('--outdir', default='.', type=str,
                         help='path to the output directory')
-    parser.add_argument('--dataset', default='patient_data', type=str,
+    parser.add_argument('--dataset', default='patient', type=str,
                         help='name of the dataset')
     parser.add_argument('--optimizer_experts', default='adam', type=str,
                         help='optimization algorithm (options: sgd | adam, default: adam)')
@@ -159,6 +170,10 @@ if __name__ == '__main__':
                         help='weight decay for optimizer')
     parser.add_argument('--num_experts', type=int, default=5, metavar='N',
                         help='number of experts (default: 5)')
+    parser.add_argument('--load_initialized_experts', type=bool, default=False,
+                        help='whether to load already pre-trained experts')
+    parser.add_argument('--model_for_initialized_experts', type=str, default='',
+                        help='path to pre-trained experts')
 
     # Get arguments
     args = parser.parse_args()
@@ -220,17 +235,22 @@ if __name__ == '__main__':
     loss_initial = torch.nn.MSELoss(reduction='mean')
     criterion = torch.nn.BCELoss(reduction='mean')
 
-    # Initialize Experts as approximately Identity
+    # Initialize Experts as approximately Identity on Transformed Data
     for i, expert in enumerate(experts):
-        if args.optimizer_initialize == 'adam':
-            optimizer_E = torch.optim.Adam(expert.parameters(), lr=args.learning_rate_initialize,
-                                           weight_decay=args.weight_decay)
-        elif args.optimizer_initialize == 'sgd':
-            optimizer_E = torch.optim.SGD(expert.parameters(), lr=args.learning_rate_initialize,
-                                          weight_decay=args.weight_decay)
+        if args.load_initialized_experts:
+            path = os.path.join(checkpt_dir,
+                                args.model_for_initialized_experts + '_E_{}_init.pth'.format(i+1))
+            init_weights(expert, path)
         else:
-            raise NotImplementedError
-        initialize_expert(args.epochs_init, expert, i, optimizer_E, loss_initial, data_train, args, writer)
+            if args.optimizer_initialize == 'adam':
+                optimizer_E = torch.optim.Adam(expert.parameters(), lr=args.learning_rate_initialize,
+                                                   weight_decay=args.weight_decay)
+            elif args.optimizer_initialize == 'sgd':
+                optimizer_E = torch.optim.SGD(expert.parameters(), lr=args.learning_rate_initialize,
+                                                  weight_decay=args.weight_decay)
+            else:
+                raise NotImplementedError
+            initialize_expert(args.epochs_init, expert, i, optimizer_E, loss_initial, data_train, args, writer)
 
     # Optimizers
     optimizers_E = []
