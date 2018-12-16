@@ -94,8 +94,8 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
         for i, expert in enumerate(experts):
             winning_indexes = mask_winners.eq(i).nonzero().squeeze(dim=-1)
             n_expert_samples = winning_indexes.size(0)
-            total_samples_expert[i] += n_expert_samples
             if n_expert_samples > 0:
+                total_samples_expert[i] += n_expert_samples
                 samples = x_transf[winning_indexes]
                 labels = torch.full((n_expert_samples,), canonical_label, device=args.device).unsqueeze(dim=1)
                 loss_E = criterion(discriminator(samples), labels)
@@ -215,8 +215,8 @@ if __name__ == '__main__':
     discriminator = Discriminator(args).to(args.device)
 
     # Losses
-    loss_initial = getattr(LossReconstruction(args), 'MSE')
-    criterion = torch.nn.BCELoss() # TODO: pick the right loss
+    loss_initial = torch.nn.MSELoss(reduction='mean')
+    criterion = torch.nn.BCELoss(reduction='mean')
 
     # Initialize Experts as approximately Identity
     for i, expert in enumerate(experts):
