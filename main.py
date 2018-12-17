@@ -56,9 +56,10 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
     total_loss_expert = [0 for i in range(len(experts))]
     total_samples_expert = [0 for i in range(len(experts))]
     expert_scores_D = [0 for i in range(len(experts))]
+    expert_winning_samples_idx = [[] for i in range(len(experts))]
 
     # Iterate through data
-    for batch in data_train:
+    for idx, batch in enumerate(data_train):
         x_canon, x_transf = batch
         # x_transf = torch.randn(x_canon.size()) # TODO temporary since do not have the preturbed data yet
         batch_size = x_canon.size(0)
@@ -98,6 +99,8 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
         # Update each expert on samples it won
         for i, expert in enumerate(experts):
             winning_indexes = mask_winners.eq(i).nonzero().squeeze(dim=-1)
+            accrue = 0 if idx == 0 else 1
+            expert_winning_samples_idx[i] += (winning_indexes+accrue*n_samples).tolist()
             n_expert_samples = winning_indexes.size(0)
             if n_expert_samples > 0:
                 total_samples_expert[i] += n_expert_samples
@@ -120,6 +123,10 @@ def train_system(epoch, experts, discriminator, optimizers_E, optimizer_D, crite
     writer.add_scalar('loss_D_canonical', mean_loss_D_canon, epoch + 1)
     writer.add_scalar('loss_D_transformed', mean_loss_D_generated, epoch + 1)
     for i in range(len(experts)):
+        print("epoch [{}] expert [{}] n_samples {}".format(epoch + 1, i + 1, total_samples_expert[i]))
+        writer.add_scalar('expert_{}_n_samples'.format(i + 1), total_samples_expert[i], epoch + 1)
+        writer.add_text('expert_{}_winning_samples'.format(i + 1),
+                           ":".join([str(j) for j in expert_winning_samples_idx[i]]), epoch + 1)
         if total_samples_expert[i]> 0:
             mean_loss_expert = total_loss_expert[i] / total_samples_expert[i]
             mean_expert_scores = expert_scores_D[i] / total_samples_expert[i]
