@@ -37,6 +37,8 @@ def initialize_expert(epochs, expert, i, optimizer, loss, data_train, args, writ
         mean_loss = total_loss/n_samples
         print("initialization epoch [{}] expert [{}] loss {:.4f}".format(epoch+1, i+1, mean_loss))
         writer.add_scalar('expert_{}_initialization_loss'.format(i+1), mean_loss, epoch+1)
+        if mean_loss < 0.002:
+            break
 
     torch.save(expert.state_dict(), checkpt_dir + '/{}_E_{}_init.pth'.format(args.name, i + 1))
 
