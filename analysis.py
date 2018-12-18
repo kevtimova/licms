@@ -35,19 +35,15 @@ def test_trained_models(experts, discriminator, data_train, args, files):
         expert_scores = torch.cat(expert_scores, dim=1)
         mask_winners = expert_scores.argmax(dim=1)
 
-        exp_outputs_won = [[] for i in range(args.num_experts)]
         for i, expert in enumerate(experts):
             winning_indexes = mask_winners.eq(i).nonzero().squeeze(dim=-1)
             n_expert_samples = winning_indexes.size(0)
             if n_expert_samples > 0:
                 exp_samples = exp_outputs[winning_indexes, i].data
-                exp_outputs_won[i].append(exp_samples)
+                np.savetxt(files[i], exp_samples.numpy(), delimiter=',')
 
-        for i in range(args.num_experts):
-            import ipdb; ipdb.set_trace()
-            exp_outputs_won[i] = torch.cat(exp_outputs_won[i], dim=1)
-            np.savetxt(files[i], exp_outputs_won[i].numpy(), delimiter=',')
-            files[i].close()
+    for i in range(args.num_experts):
+        files[i].close()
 
 if __name__ == '__main__':
     # Arguments
@@ -120,7 +116,8 @@ if __name__ == '__main__':
     if not os.path.exists(analysis_dir):
         os.mkdir(analysis_dir)
     for i in range(args.num_experts):
-        file_path = os.path.join(analysis_dir, 'expert_{}_output.csv'.format(i))
+        file_path = os.path.join(analysis_dir,
+                                 '{}_E_{}_output.csv'.format(args.model_for_initialization, i + 1))
         f = open(file_path, 'ab')
         files.append(f)
 
