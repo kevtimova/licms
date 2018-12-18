@@ -11,9 +11,9 @@ class LossReconstruction:
         return sum_sq_diff.mean()
 
 
-def init_weights(expert, path):
+def init_weights(model, path):
     pre_trained_dict = torch.load(path, map_location=lambda storage, loc: storage)
     for layer in pre_trained_dict.keys():
-        expert.state_dict()[layer].copy_(pre_trained_dict[layer])
-    for param in expert.parameters():
+        model.state_dict()[layer].copy_(pre_trained_dict[layer])
+    for param in model.parameters():
         param.requires_grad = True
