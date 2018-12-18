@@ -26,7 +26,7 @@ class Expert(nn.Module):
         elif self.args.dataset == 'patient':
             self.model = nn.Sequential(
                 *block(self.args.input_size, 128, normalize=False),
-                *block(128, int(self.args.input_size))
+                nn.Linear(128, int(self.args.input_size))
             )
         else:
             raise NotImplementedError
